@@ -1,5 +1,6 @@
 import { Model } from "mongoose";
 import { Request } from "express";
+import axios from "axios";
 
 import { Response } from "express";
 type DynamicContent =
@@ -26,6 +27,48 @@ const sendSuccessResponse = function (
 };
 
 
+const sendMessageResponse = async function(phoneId, from, token, message, btnId, btnTitle){
+  try {
+    
+  
+  await axios({
+    method: "POST", // Required, HTTP method, a string, e.g. POST, GET
+    url:
+      "https://graph.facebook.com/v15.0/" +
+      phoneId +
+      "/messages?access_token=" +
+      token,
+    data: {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: from,
+      type: "interactive",
+      interactive: {
+        "type": "button",
+        "body": {
+          "text": `${message}`
+        },
+        "action": {
+          "buttons": [
+            {
+              "type": "reply",
+              "reply": {
+                "id": `${btnId}`,
+                "title": `${btnTitle}`
+              }
+            }
+          ]
+        }
+      }
+    },
+    headers: { "Content-Type": "application/json" },
+  });
+
+} catch (error) {
+  //console.log(error,'axios error')
+    
+}
+}
 
 
 const sendErrorResponse = function (
@@ -128,4 +171,7 @@ export default {
   errorResponse,
   trimCollection,
   validParam,
+  sendMessageResponse
 };
+
+

@@ -137,12 +137,29 @@ public async createLesson(req: Request & {user: any}, res: Response) {
 }
 
 
+public async verifyToken(req: Request, res: Response) {
+  try {
+    const token = process.env.VERIFY_TOKEN;
+    console.log(req.query)
+    if (
+      req.query["hub.mode"] == "subscribe" &&
+      req.query["hub.verify_token"] == token
+    ) {
+      console.log("webhook connected");
+      res.send(req.query["hub.challenge"]);
+    } else {
+      res.sendStatus(400);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+}
 
 public async webhook(req: Request, res: Response) {
   try {
-    const token = process.env.WHATSAPP_TOKEN;
+    const token = process.env.TOKEN;
     // Check the Incoming webhook message
-    // console.log(JSON.stringify(req.body, null, 2));
+   // console.log(JSON.stringify(req.body, null, 2));
 
     // info on WhatsApp text message payload: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#text-messages
     if (req.body.object) {
@@ -153,31 +170,132 @@ public async webhook(req: Request, res: Response) {
         req.body.entry[0].changes[0].value.messages &&
         req.body.entry[0].changes[0].value.messages[0]
       ) {
+
         let phone_number_id =
           req.body.entry[0].changes[0].value.metadata.phone_number_id;
         let from = req.body.entry[0].changes[0].value.messages[0].from; // extract the phone number from the webhook payload
-        let msg_body =
-          req.body.entry[0].changes[0].value.messages[0].text.body.trim(); // extract the message text from the webhook payload
-        //get the profile of the user who sent the whatsapp messahe
         
-        let message;
+
+        if(req.body.entry[0].changes[0].value.messages[0].interactive){
+        
+        var buttonReplyId = req.body.entry[0].changes[0].value.messages[0].interactive.button_reply.id;
+        var buttonReplyTitle = req.body.entry[0].changes[0].value.messages[0].interactive.button_reply.title 
+
+
+        let response;
+        switch (buttonReplyTitle) {
+        case 'Course Intro':
+
+          Course.findOne(
+            { courseId: buttonReplyId },
+            async (err: Error, course) => {
+              if (err) {
+
+                console.log(err, 'course intro err')
+                
+              }
+
+              const intro = course.intro
+              const btnId = buttonReplyId;
+              const btnTitle = 'Section 1';
+              return utils.helpers.sendMessageResponse(phone_number_id, from, token, intro, btnId, btnTitle)
+      
+              
+            }
+          );
+          break;
+
+          case 'Section 1':
+          
+          const lessId = `${buttonReplyId}L1`
+          Lesson.findOne(
+            { lessonId: lessId, courseId: buttonReplyId },
+            async (err: Error, lesson) => {
+              if (err) {
+                return utils.helpers.sendErrorResponse(
+                  res,
+                  {},
+                  "Something went wrong, please try again"
+                );
+              }
+
+              console.log(lesson.sections, 'less')
+              const intro = `${lesson.sections[0]}`
+              const btnId = buttonReplyId;
+              const btnTitle = 'Lesson 1';
+
+              return utils.helpers.sendMessageResponse(phone_number_id, from, token, intro, btnId, btnTitle)
+      
+              
+            }
+          );
+          break;
+
+
+
+
+
+
+
+
+
+
+        default:
+            response = "Unknown button clicked";
+       }
+
+
+
+
+
+
+
+
+
+
+        }else{
+
+          await axios({
+            method: "POST", // Required, HTTP method, a string, e.g. POST, GET
+            url:
+              "https://graph.facebook.com/v15.0/" +
+              phone_number_id +
+              "/messages?access_token=" +
+              token,
+            data: {
+              messaging_product: "whatsapp",
+              recipient_type: "individual",
+              to: from,
+              type: "interactive",
+              interactive: {
+                "type": "button",
+                "body": {
+                  "text": "Welcome to this Course titled: Understanding Global Warming: Causes, Impacts, and Solutions. Please click continue to begin"
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "CO1234",
+                        "title": "Course Intro"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            headers: { "Content-Type": "application/json" },
+          });
+
+        }
+
+        
 
        
-        await axios({
-          method: "POST", // Required, HTTP method, a string, e.g. POST, GET
-          url:
-            "https://graph.facebook.com/v15.0/" +
-            phone_number_id +
-            "/messages?access_token=" +
-            token,
-          data: {
-            messaging_product: "whatsapp",
-            to: from,
-            text: { body: message },
-            preview_url: true,
-          },
-          headers: { "Content-Type": "application/json" },
-        });
+
+       
+        
         // console.log(whatsapp.data)
         // res.send(message)
       }
@@ -188,7 +306,7 @@ public async webhook(req: Request, res: Response) {
       res.sendStatus(404);
     }
   } catch (error) {
-    console.log(error.data);
+    console.log(error, 'kk');
     res.send(error);
   }
 }

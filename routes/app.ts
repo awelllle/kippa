@@ -12,7 +12,8 @@ export class AppRoutes {
      
 
         app.route('/for/messages/from/whatsapp').post(this.appController.webhook)
-       
+
+        app.route('/for/messages/from/whatsapp').get(this.appController.verifyToken)
         
     }
 }
