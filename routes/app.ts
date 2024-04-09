@@ -9,6 +9,8 @@ export class AppRoutes {
       
         app.route('/course').post([], this.appController.createCourse)
         app.route('/lesson').post([], this.appController.createLesson)
+
+        app.route('/addSection').post([], this.appController.addSection)
      
 
         app.route('/for/messages/from/whatsapp').post(this.appController.webhook)

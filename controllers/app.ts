@@ -74,6 +74,7 @@ public async createLesson(req: Request & {user: any}, res: Response) {
   const required = [
     { name: 'courseId', type: 'string' },
     { name: 'title', type: 'string' },
+    { name: 'closingRemarks', type: 'string' },
    
   ]
   const { body } = req;
@@ -83,16 +84,21 @@ public async createLesson(req: Request & {user: any}, res: Response) {
     
     let courseId: string = body.courseId;
     let lessonId: string = body.lessonId;
+    let closing: string = body.closingRemarks;
 
         const filter = { 
           courseId,
           lessonId
       };
 
+     // course.sections.push({ name: sectionName });
+
       const update = {
         title: body.title,
         courseId: courseId,
-        lessonId: lessonId
+        lessonId: lessonId,
+        closingRemarks: closing
+      
       };
 
 
@@ -121,6 +127,57 @@ public async createLesson(req: Request & {user: any}, res: Response) {
           'Lesson has been created',
           )
       }
+      
+  
+  }else{
+
+    console.log(hasRequired.message)
+    const message = hasRequired.message
+    return utils.helpers.sendErrorResponse(
+    res,
+    { message },
+    'Missing required fields',
+    )
+
+  }
+}
+
+
+public async addSection(req: Request & {user: any}, res: Response) {
+
+  const required = [
+   
+    { name: 'lessonId', type: 'string' },
+    { name: 'section', type: 'string' },
+   
+  ]
+  const { body } = req;
+  const hasRequired = utils.helpers.validParam(body, required)
+
+  if (hasRequired.success) {
+    
+    let lessonId: string = body.lessonId;
+    let section: Array<string> = body.section;
+
+    const course = await Lesson.findById(lessonId);
+        
+    if (!course) {
+      console.log('Course not found');
+      return;
+    }
+
+    // Add the section to the course's sections array
+    course.sections.push({ content: section });
+    // Save the updated course document
+    await course.save();
+
+
+        return utils.helpers.sendSuccessResponse(
+          res,
+          [],
+          'Course has been added',
+          )
+      
       
   
   }else{
@@ -220,9 +277,9 @@ public async webhook(req: Request, res: Response) {
               }
 
               console.log(lesson.sections, 'less')
-              const intro = `${lesson.sections[0]}`
+              const intro = `${lesson.sections[0].content}`
               const btnId = buttonReplyId;
-              const btnTitle = 'Lesson 1';
+              const btnTitle = 'Section 2';
 
               return utils.helpers.sendMessageResponse(phone_number_id, from, token, intro, btnId, btnTitle)
       
@@ -231,25 +288,85 @@ public async webhook(req: Request, res: Response) {
           );
           break;
 
+          case 'Section 2':
+          
+          const lessId2 = `${buttonReplyId}L1`
+          Lesson.findOne(
+            { lessonId: lessId2, courseId: buttonReplyId },
+            async (err: Error, lesson) => {
+              if (err) {
+                return utils.helpers.sendErrorResponse(
+                  res,
+                  {},
+                  "Something went wrong, please try again"
+                );
+              }
 
+              console.log(lesson.sections, 'less')
+              const intro = `${lesson.sections[1].content}`
+              const btnId = buttonReplyId;
+              const btnTitle = 'Section 3';
 
+              return utils.helpers.sendMessageResponse(phone_number_id, from, token, intro, btnId, btnTitle)
+      
+              
+            }
+          );
+          break
+          case 'Section 3':
+          
+          const lessId3 = `${buttonReplyId}L1`
+          Lesson.findOne(
+            { lessonId: lessId3, courseId: buttonReplyId },
+            async (err: Error, lesson) => {
+              if (err) {
+                return utils.helpers.sendErrorResponse(
+                  res,
+                  {},
+                  "Something went wrong, please try again"
+                );
+              }
 
+              console.log(lesson.sections, 'less')
+              const intro = `${lesson.sections[2].content}`
+              const btnId = buttonReplyId;
+              const btnTitle = 'Closing Remarks';
 
+              return utils.helpers.sendMessageResponse(phone_number_id, from, token, intro, btnId, btnTitle)
+      
+              
+            }
+          );
+          break
 
+          case 'Closing Remarks':
+          
+          const lessId4 = `${buttonReplyId}L1`
+          Lesson.findOne(
+            { lessonId: lessId4, courseId: buttonReplyId },
+            async (err: Error, lesson) => {
+              if (err) {
+                return utils.helpers.sendErrorResponse(
+                  res,
+                  {},
+                  "Something went wrong, please try again"
+                );
+              }
 
+              console.log(lesson.sections, 'less')
+              const intro = `${lesson.closingRemarks}`
+              const btnId = buttonReplyId;
+              const btnTitle = 'Lesson Quiz';
 
-
+              return utils.helpers.sendMessageResponse(phone_number_id, from, token, intro, btnId, btnTitle)
+      
+              
+            }
+          );
 
         default:
             response = "Unknown button clicked";
        }
-
-
-
-
-
-
-
 
 
 
@@ -290,12 +407,7 @@ public async webhook(req: Request, res: Response) {
 
         }
 
-        
 
-       
-
-       
-        
         // console.log(whatsapp.data)
         // res.send(message)
       }
